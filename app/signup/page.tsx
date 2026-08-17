@@ -28,10 +28,11 @@ export default function Signup() {
     if (!PASSWORD_RE.test(password)) { setErr("Password must be at least 8 characters and include a letter and a number."); return; }
 
     setBusy(true);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     const { data, error } = await supabase().auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } },
+      options: { data: { full_name: name }, emailRedirectTo: `${siteUrl}/dashboard` },
     });
     if (error) { setBusy(false); setErr(error.message); return; }
     if (!data.user) { setBusy(false); setErr("Sign up failed. Please try again."); return; }
