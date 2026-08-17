@@ -33,14 +33,12 @@ export default function Reporting() {
     if (!allowed) return;
     (async () => {
       const db = supabase();
-      const [{ data: t }, { data: pp }, { data: st }, { data: pj }, { data: pf }] = await Promise.all([
-        db.from("tasks").select("*"),
+      const [{ data: pp }, { data: st }, { data: pj }, { data: pf }] = await Promise.all([
         db.from("profiles").select("*").order("full_name"),
         db.from("stages").select("*").order("sort"),
         db.from("projects").select("*").order("name"),
         db.from("portfolios").select("*").order("sort"),
       ]);
-      setTasks((t as Task[]) || []);
       setPeople((pp as Profile[]) || []);
       setStages((st as StageRow[]) || []);
       setProjects((pj as any[]) || []);
@@ -60,25 +58,43 @@ export default function Reporting() {
 
   const stageNames = useMemo(() => Array.from(new Set(stages.map((s) => s.name))), [stages]);
 
-  const filteredTasks = useMemo(() => {
-    const ql = q.trim().toLowerCase();
-    return tasks.filter((t) => {
-      // visibility: only tasks for people the user can see
-      if (!hasFull) {
-        const allowedSet = new Set(hasFull ? people.map((p) => p.id) : myReports.length ? [...myReports, profile!.id] : [profile!.id]);
-        if (t.assignee && !allowedSet.has(t.assignee)) return false;
+  // Server-side filtered tasks
+  const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
+  const [totalFiltered, setTotalFiltered] = useState(0);
+  const [loadingFiltered, setLoadingFiltered] = useState(false);
+
+  useEffect(() => {
+    if (!allowed || !profile) return;
+    let cancelled = false;
+    setLoadingFiltered(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/reports/tasks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile_id: profile.id,
+            portfolio_ids: selPortfolios,
+            project_ids: selProjects,
+            sections: selSections,
+            people: selPeople,
+            q,
+            limit: 100,
+            offset: 0,
+          }),
+        });
+        const json = await res.json();
+        if (cancelled) return;
+        setFilteredTasks(json.rows || []);
+        setTotalFiltered(json.total || 0);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (!cancelled) setLoadingFiltered(false);
       }
-      if (selPortfolios.length) {
-        const pj = projects.find((p) => p.id === t.project_id);
-        if (!pj || !selPortfolios.includes(pj.portfolio_id)) return false;
-      }
-      if (selProjects.length && !selProjects.includes(t.project_id)) return false;
-      if (selSections.length && !selSections.includes(t.stage)) return false;
-      if (selPeople.length && (!t.assignee || !selPeople.includes(t.assignee))) return false;
-      if (ql && !(`${t.title} ${t.code}`.toLowerCase().includes(ql))) return false;
-      return true;
-    });
-  }, [tasks, q, selPortfolios, selProjects, selSections, selPeople, projects, people, profile, myReports, hasFull]);
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [allowed, profile, q, selPortfolios, selProjects, selSections, selPeople]);
 
   const rows = useMemo(() => visiblePeople.map((p) => {
     const mine = filteredTasks.filter((t) => t.assignee === p.id);

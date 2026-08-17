@@ -287,6 +287,21 @@ create table if not exists feature_permissions (
   primary key (feature, role)
 );
 
+-- Saved filters for reporting: users can save named filter JSON
+create table if not exists saved_filters (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  name text not null,
+  filters jsonb not null,
+  is_private boolean default true,
+  created_at timestamptz default now()
+);
+
+-- Indexes useful for reporting queries
+create index if not exists tasks_project_idx on tasks (project_id);
+create index if not exists tasks_assignee_idx on tasks (assignee);
+create index if not exists tasks_stage_idx on tasks (stage);
+
 -- ============================================================
 -- DE-DUPLICATION + UNIQUENESS (fixes repeated TELUGU / TAMIL)
 -- ============================================================
