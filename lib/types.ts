@@ -34,6 +34,8 @@ export function displayName(value: string | Partial<Profile> | null | undefined)
 export interface Portfolio { id: string; name: string; color: string; sort: number; }
 export interface Project { id: string; portfolio_id: string; name: string; prefix: string; color: string; sort: number; }
 export interface StageRow { id: string; project_id: string; name: string; color: string; sort: number; }
+export interface ChecklistItem { id: string; task_id: string; text: string; done: boolean; sort: number; created_at?: string; }
+export interface TaskFile { id: string; task_id: string; name: string; path: string; uploaded_by: string | null; created_at?: string; }
 
 // Fallback pipeline used before a project's stages load
 export const DEFAULT_STAGES = [
@@ -44,10 +46,19 @@ export const DEFAULT_STAGES = [
 ];
 export const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
+export type Priority = "low" | "medium" | "high" | "urgent";
+export const PRIORITY_LABELS: Record<Priority, string> = {
+  low: "Low", medium: "Medium", high: "High", urgent: "Urgent",
+};
+export const PRIORITY_COLORS: Record<Priority, string> = {
+  low: "#64748B", medium: "#2F63F6", high: "#D97706", urgent: "#DC2626",
+};
+
 export interface Task {
   id: string; project_id: string; code: string; title: string; stage: string;
   status: "open" | "completed"; due_at: string | null; assignee: string | null;
   origin_task: string | null; content_type: string | null; completed_at: string | null; created_at?: string;
+  description: string | null; priority: Priority | null; labels: string[];
 }
 
 export interface AutomationRule {
