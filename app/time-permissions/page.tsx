@@ -5,7 +5,7 @@ import { PageHead, StatusBadge } from "@/components/Ui";
 import { MemphisClock } from "@/components/Memphis";
 import { supabase } from "@/lib/supabase";
 import { useProfile, hasFullAccess } from "@/lib/session";
-import { TimePermission, Profile, ApprovalRoute, resolveApprover } from "@/lib/types";
+import { TimePermission, Profile, ApprovalRoute, resolveApprover, displayName } from "@/lib/types";
 import { downloadCSV, downloadDoc } from "@/lib/csv";
 import { pushNotification } from "@/lib/notify";
 
@@ -83,13 +83,13 @@ export default function TimePermissions() {
     const route = routes.find((x) => x.request_type === "time_permission");
     const approver = resolveApprover(route, profile, people);
     if (approver) await pushNotification(approver.id, approver.email,
-      `${f.kind.replace("_", " ")} permission from ${profile.full_name}`,
+      `${f.kind.replace("_", " ")} permission from ${displayName(profile)}`,
       `${f.for_date} at ${f.at_time}. Reason: ${f.reason}${flag_late ? " · flagged LATE (inside cut-off)" : ""}${flag_over_limit ? " · OVER monthly limit — needs Team Lead second signature" : ""}`,
       "/time-permissions");
     if (flag_over_limit) {
       const lead = people.find((p) => p.role === "team_lead");
       if (lead && lead.id !== approver?.id) await pushNotification(lead.id, lead.email,
-        `Escalation: ${profile.full_name} is over the monthly limit`,
+        `Escalation: ${displayName(profile)} is over the monthly limit`,
         `Their ${f.kind.replace("_", " ")} request for ${f.for_date} needs your second signature.`, "/time-permissions");
     }
     setF({ kind: "early_leave", for_date: "", at_time: "", reason: "" });
@@ -113,14 +113,14 @@ export default function TimePermissions() {
     await supabase().from("time_permissions").update(patch).eq("id", r.id);
     const req = byId[r.requester];
     if (req) await pushNotification(req.id, req.email, `Your ${r.kind.replace("_", " ")} request was ${status}`,
-      `${r.for_date} at ${r.at_time} — decided by ${profile?.full_name}.`, "/time-permissions");
+      `${r.for_date} at ${r.at_time} — decided by ${displayName(profile)}.`, "/time-permissions");
     load();
   }
 
   function exportCSV() {
     downloadCSV(`time-permissions-${new Date().toISOString().slice(0, 10)}`, [
       ["Person", "Type", "Date", "Time", "Reason", "Status", "Late flag", "Over limit", "Requested at"],
-      ...visible.map((r) => [byId[r.requester]?.full_name, r.kind, r.for_date, r.at_time, r.reason, r.status,
+      ...visible.map((r) => [displayName(byId[r.requester]), r.kind, r.for_date, r.at_time, r.reason, r.status,
         r.flag_late ? "LATE" : "", r.flag_over_limit ? "OVER LIMIT" : "", new Date(r.created_at).toLocaleString()]),
     ]);
   }
@@ -129,7 +129,7 @@ export default function TimePermissions() {
     const list = visible.filter((r) => new Date(r.created_at) >= from);
     downloadDoc(`time-permissions-${range}`, `Time permissions — last ${range}`,
       `<h2>Time permissions — last ${range}</h2><table border="1" cellpadding="6"><tr><th>Person</th><th>Type</th><th>Date</th><th>Time</th><th>Status</th></tr>` +
-      list.map((r) => `<tr><td>${byId[r.requester]?.full_name || ""}</td><td>${r.kind}</td><td>${r.for_date}</td><td>${r.at_time}</td><td>${r.status}</td></tr>`).join("") + "</table>");
+      list.map((r) => `<tr><td>${displayName(byId[r.requester])}</td><td>${r.kind}</td><td>${r.for_date}</td><td>${r.at_time}</td><td>${r.status}</td></tr>`).join("") + "</table>");
   }
 
   return (
@@ -170,7 +170,7 @@ export default function TimePermissions() {
               <div><label className="label">Person</label>
                 <select className="input max-w-[200px]" value={filterPerson} onChange={(e) => setFilterPerson(e.target.value)}>
                   <option value="">Everyone</option>
-                  {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  {people.map((p) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
                 </select></div>
             )}
             <div><label className="label">Status</label>
@@ -193,7 +193,7 @@ export default function TimePermissions() {
           <div className="space-y-2">
             {visible.map((r) => (
               <div key={r.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-                <b>{byId[r.requester]?.full_name}</b>
+                <b>{displayName(byId[r.requester])}</b>
                 <span className="capitalize text-brand-600">{r.kind.replace("_", " ")}</span>
                 <span>{r.for_date} · {r.at_time}</span>
                 <span className="text-brand-600">{r.reason}</span>

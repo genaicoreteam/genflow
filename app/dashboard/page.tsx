@@ -5,7 +5,7 @@ import Shell, { APPS } from "@/components/Shell";
 import { MemphisTeam } from "@/components/Memphis";
 import { useProfile, hasFullAccess } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
-import { Task, LeaveRequest, cap } from "@/lib/types";
+import { Task, LeaveRequest, cap, displayName } from "@/lib/types";
 import { useFeaturePerms, featureAllowed } from "@/lib/permissions";
 
 export default function Dashboard() {
@@ -30,7 +30,7 @@ export default function Dashboard() {
       ]);
       setDue((t as Task[]) || []);
       setLeaves((l as LeaveRequest[]) || []);
-      setNames(Object.fromEntries((pp || []).map((p: any) => [p.id, p.full_name])));
+      setNames(Object.fromEntries((pp || []).map((p: any) => [p.id, displayName(p)])));
     })();
   }, [profile]);
 
@@ -54,7 +54,7 @@ export default function Dashboard() {
           {/* Greeting hero */}
           <div className="card flex items-center justify-between overflow-hidden p-8">
             <div>
-              <h1 className="text-2xl font-extrabold sm:text-3xl">{greeting}, {profile?.full_name?.split(" ")[0] || "there"} 💥</h1>
+              <h1 className="text-2xl font-extrabold sm:text-3xl">{greeting}, {displayName(profile).split(" ")[0] || "there"} 💥</h1>
               <p className="mt-2 max-w-md text-sm text-slate-500">Start bright, think big, and let your enthusiasm power the day!</p>
             </div>
             <MemphisTeam className="hidden w-56 shrink-0 sm:block" />

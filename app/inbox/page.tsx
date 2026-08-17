@@ -5,7 +5,7 @@ import Shell from "@/components/Shell";
 import { PageHead, StatusBadge, Empty } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/lib/session";
-import { Notification, Profile } from "@/lib/types";
+import { Notification, Profile, displayName } from "@/lib/types";
 import { pushNotification } from "@/lib/notify";
 
 /* Inbox = in-app notifications (assignments, mentions, approvals, alerts)
@@ -44,7 +44,7 @@ export default function Inbox() {
     await supabase().from("adhoc_requests").update({ status }).eq("id", r.id);
     const req = byId[r.requester];
     if (req) await pushNotification(req.id, req.email, `Your ad-hoc request was ${status}`,
-      `"${r.message}" — decided by ${profile?.full_name}.`, "/warnings");
+      `"${r.message}" — decided by ${displayName(profile)}.`, "/warnings");
     load();
   }
 
@@ -89,7 +89,7 @@ export default function Inbox() {
           {adhoc.length === 0 && <Empty text="No requests routed to you." />}
           {adhoc.map((r) => (
             <div key={r.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-              <b>{byId[r.requester]?.full_name || "Member"}</b>
+              <b>{displayName(byId[r.requester])}</b>
               <span className="text-slate-500">{r.message}</span>
               <span className="ml-auto flex items-center gap-2">
                 <StatusBadge s={r.status} />

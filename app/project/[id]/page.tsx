@@ -5,7 +5,7 @@ import Shell from "@/components/Shell";
 import { StatusBadge, Spinner } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile, hasFullAccess } from "@/lib/session";
-import { Task, Project, Profile, AutomationRule, StageRow, LogicRule, cap } from "@/lib/types";
+import { Task, Project, Profile, AutomationRule, StageRow, LogicRule, cap, displayName } from "@/lib/types";
 import { pushNotification } from "@/lib/notify";
 import { runLogicRules } from "@/lib/automation";
 
@@ -87,7 +87,7 @@ export default function ProjectPage() {
       project_id: project.id, code, title: title.trim(), stage, status: "open",
       assignee: profile?.id || null, created_by: profile?.id || null,
     }).select().maybeSingle();
-    if (data) await runLogicRules({ rules: logic, trigger: "task_created", task: data as Task, people, projectPrefix: project.prefix, taskCount: tasks.length + 1, actorName: profile?.full_name || "" });
+    if (data) await runLogicRules({ rules: logic, trigger: "task_created", task: data as Task, people, projectPrefix: project.prefix, taskCount: tasks.length + 1, actorName: displayName(profile) });
     load();
   }
 
@@ -116,12 +116,12 @@ export default function ProjectPage() {
       }).eq("id", t.id);
       if (nextAssignee && nextAssignee !== t.assignee) await notifyAssignee(nextAssignee, t.title, newCode(2), target, due);
       else if (nextAssignee) await notifyAssignee(nextAssignee, t.title, newCode(2), target, due);
-      await runLogicRules({ rules: logic, trigger: "moved_to_stage", task: { ...t, stage: target }, stageMoved: target, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 2, actorName: profile?.full_name || "" });
+      await runLogicRules({ rules: logic, trigger: "moved_to_stage", task: { ...t, stage: target }, stageMoved: target, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 2, actorName: displayName(profile) });
     } else {
       // last stage (or no rule): simply complete in place
       await db.from("tasks").update({ status: "completed", completed_at: now.toISOString() }).eq("id", t.id);
     }
-    await runLogicRules({ rules: logic, trigger: "task_completed", task: t, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 2, actorName: profile?.full_name || "" });
+    await runLogicRules({ rules: logic, trigger: "task_completed", task: t, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 2, actorName: displayName(profile) });
     setBusy(false); load();
   }
 
@@ -138,7 +138,7 @@ export default function ProjectPage() {
   async function setAssignee(t: Task, pid: string) {
     await supabase().from("tasks").update({ assignee: pid || null }).eq("id", t.id);
     if (pid && pid !== t.assignee) await notifyAssignee(pid, t.title, t.code, t.stage, t.due_at);
-    await runLogicRules({ rules: logic, trigger: pid ? "assignee_changed" : "task_unassigned", task: { ...t, assignee: pid || null }, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 1, actorName: profile?.full_name || "" });
+    await runLogicRules({ rules: logic, trigger: pid ? "assignee_changed" : "task_unassigned", task: { ...t, assignee: pid || null }, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 1, actorName: displayName(profile) });
     load();
   }
   async function setDue(t: Task, v: string) {
@@ -301,7 +301,7 @@ function TaskCard({ t, people, canEdit, me, onDragStart, onComplete, onReopen, o
           value={t.due_at ? new Date(t.due_at).toISOString().slice(0, 16) : ""} onChange={(e) => onDue(e.target.value)} />
         <select className="input !w-28 !px-1 !py-1 text-xs" disabled={!canEdit} value={t.assignee || ""} onChange={(e) => onAssign(e.target.value)}>
           <option value="">Unassigned</option>
-          {people.map((p: Profile) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+          {people.map((p: Profile) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
         </select>
       </div>
       <select className="input mt-1 !w-full !px-1 !py-1 text-xs" disabled={!editable} value={t.content_type || ""} onChange={(e) => onContent(e.target.value)}>
@@ -341,7 +341,7 @@ function Roadmap({ tasks, byId, stages }: { tasks: Task[]; byId: Record<string, 
             <span className={`font-semibold ${t.status === "completed" ? "text-slate-400 line-through" : ""}`}>{t.title}</span>
             {t.content_type && <span className="badge bg-slate-100 text-slate-600">{t.content_type}</span>}
             <span className="ml-auto flex items-center gap-2 text-xs text-slate-500">
-              {t.assignee && <span>{byId[t.assignee]?.full_name}</span>}
+              {t.assignee && <span>{displayName(byId[t.assignee])}</span>}
               {t.due_at && <span className={t.status === "open" && new Date(t.due_at) < new Date() ? "font-bold text-red-600" : ""}>{new Date(t.due_at).toLocaleString()}</span>}
             </span>
           </div>
@@ -366,11 +366,11 @@ function Discussions({ projectId, people, projectName }: { projectId: string; pe
 
   const word = msg.split(/\s/).pop() || "";
   const picking = word.startsWith("@") && !word.includes("]");
-  const matches = picking ? people.filter((p) => p.full_name.toLowerCase().includes(word.slice(1).toLowerCase())).slice(0, 6) : [];
+  const matches = picking ? people.filter((p) => displayName(p).toLowerCase().includes(word.slice(1).toLowerCase())).slice(0, 6) : [];
 
   function pick(p: Profile) {
     const parts = msg.split(/\s/); parts.pop();
-    setMsg([...parts, `@[${p.full_name}]`].join(" ") + " ");
+    setMsg([...parts, `@[${displayName(p)}]`].join(" ") + " ");
     setShowPick(false);
   }
 
@@ -382,9 +382,9 @@ function Discussions({ projectId, people, projectName }: { projectId: string; pe
     // notify each mentioned person
     const mentioned = Array.from(msg.matchAll(/@\[([^\]]+)\]/g)).map((m) => m[1]);
     for (const name of mentioned) {
-      const p = people.find((x) => x.full_name === name);
+      const p = people.find((x) => displayName(x) === name);
       if (p && p.id !== profile.id)
-        await pushNotification(p.id, p.email, `${profile.full_name} mentioned you`,
+        await pushNotification(p.id, p.email, `${displayName(profile)} mentioned you`,
           `In ${projectName} discussions: "${msg.trim().slice(0, 140)}"`, `/project/${projectId}`);
     }
     setMsg(""); load();
@@ -404,7 +404,7 @@ function Discussions({ projectId, people, projectName }: { projectId: string; pe
         {rows.map((r) => (
           <div key={r.id} className="rounded-xl bg-slate-50 p-3">
             <div className="flex items-center gap-2 text-xs text-slate-500">
-              <b className="text-brand-ink">{r.profiles?.full_name || "Member"}</b>
+              <b className="text-brand-ink">{displayName(r.profiles || { email: "", full_name: "" })}</b>
               {r.task_code && <span className="badge bg-brand-100 text-brand-700">{r.task_code}</span>}
               <span>{new Date(r.created_at).toLocaleString()}</span>
             </div>
@@ -416,7 +416,7 @@ function Discussions({ projectId, people, projectName }: { projectId: string; pe
         {picking && matches.length > 0 && (
           <div className="absolute bottom-12 left-0 z-20 w-64 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-card">
             {matches.map((p) => (
-              <button type="button" key={p.id} onClick={() => pick(p)} className="block w-full px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">@{p.full_name}</button>
+              <button type="button" key={p.id} onClick={() => pick(p)} className="block w-full px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50">@{displayName(p)}</button>
             ))}
           </div>
         )}

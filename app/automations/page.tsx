@@ -5,7 +5,7 @@ import { PageHead, Empty } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/lib/session";
 import { useFeaturePerms, featureAllowed } from "@/lib/permissions";
-import { AutomationRule, Project, Profile, LogicRule, LogicAction, TRIGGER_LABELS, LogicTrigger, StageRow, cap } from "@/lib/types";
+import { AutomationRule, Project, Profile, LogicRule, LogicAction, TRIGGER_LABELS, LogicTrigger, StageRow, cap, displayName } from "@/lib/types";
 
 export default function Automations() {
   const { profile, loading } = useProfile();
@@ -40,7 +40,10 @@ export default function Automations() {
     const relevant = projectId ? stages.filter((s) => s.project_id === projectId) : stages;
     return Array.from(new Set(relevant.map((s) => s.name)));
   };
-  const name = (id: string | null) => people.find((p) => p.id === id)?.full_name || "Keep same assignee";
+  const name = (id: string | null) => {
+    const p = people.find((x) => x.id === id);
+    return p ? displayName(p) : "Keep same assignee";
+  };
   const pname = (id: string | null) => projects.find((p) => p.id === id)?.name || "All projects";
 
   async function addHandOff(e: React.FormEvent) {
@@ -107,7 +110,7 @@ export default function Automations() {
         <div><label className="label">New assignee</label>
           <select className="input" value={f.new_assignee} onChange={(e) => setF({ ...f, new_assignee: e.target.value })}>
             <option value="">Keep same</option>
-            {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+            {people.map((p) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
           </select></div>
         <div><label className="label">Due after (hours)</label>
           <input type="number" min={1} className="input" value={f.due_offset_hours} onChange={(e) => setF({ ...f, due_offset_hours: Number(e.target.value) })} /></div>
@@ -164,14 +167,14 @@ export default function Automations() {
               {a.type === "assign" && (
                 <select className="input !w-48" value={a.value || ""} onChange={(e) => setAction(i, { value: e.target.value })}>
                   <option value="">Choose person…</option>
-                  {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  {people.map((p) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
                 </select>
               )}
               {a.type === "notify" && (
                 <>
                   <select className="input !w-48" value={a.value || "assignee"} onChange={(e) => setAction(i, { value: e.target.value })}>
                     <option value="assignee">The assignee</option>
-                    {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                    {people.map((p) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
                   </select>
                   <input className="input !w-64" placeholder="Message (optional)" value={a.extra || ""} onChange={(e) => setAction(i, { extra: e.target.value })} />
                 </>
@@ -185,7 +188,7 @@ export default function Automations() {
               {a.type === "followup" && (
                 <select className="input !w-48" value={a.extra || ""} onChange={(e) => setAction(i, { extra: e.target.value })}>
                   <option value="">Same assignee</option>
-                  {people.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+                  {people.map((p) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
                 </select>
               )}
               {a.type === "shift_due" && <input type="number" className="input !w-28" placeholder="hours" value={a.value || ""} onChange={(e) => setAction(i, { value: e.target.value })} />}

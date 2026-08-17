@@ -4,7 +4,7 @@ import Shell from "@/components/Shell";
 import { PageHead, Empty } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile, hasFullAccess } from "@/lib/session";
-import { Profile } from "@/lib/types";
+import { Profile, displayName } from "@/lib/types";
 import { notifyEmail } from "@/lib/notify";
 
 /* Feedback Box — anyone can write feedback or a complaint. It is visible only to the
@@ -47,7 +47,7 @@ export default function Feedback() {
     if (!profile || !body.trim()) return;
     await supabase().from("feedback").insert({ sender: profile.id, body: body.trim() });
     const mgr = byId[profile.reports_to || ""];
-    if (mgr?.email) notifyEmail(mgr.email, "GenFlow: new feedback in your box", `<p>${profile.full_name} left feedback. Open GenFlow → Feedback Box to read it.</p>`);
+    if (mgr?.email) notifyEmail(mgr.email, "GenFlow: new feedback in your box", `<p>${displayName(profile)} left feedback. Open GenFlow → Feedback Box to read it.</p>`);
     setBody(""); setMsg("Thanks — your feedback is with the right people."); load();
   }
 
@@ -68,7 +68,7 @@ export default function Feedback() {
           {visible.map((r) => (
             <div key={r.id} className="card p-3 text-sm">
               <div className="mb-1 flex items-center gap-2 text-xs text-brand-600">
-                <b>{byId[r.sender]?.full_name || "Member"}</b>
+                <b>{displayName(byId[r.sender])}</b>
                 <span className="badge bg-brand-100 text-brand-700">{byId[r.sender]?.role}</span>
                 <span>{new Date(r.created_at).toLocaleString()}</span>
               </div>

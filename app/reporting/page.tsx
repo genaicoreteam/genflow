@@ -5,7 +5,7 @@ import { PageHead, Empty } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/lib/session";
 import { useFeaturePerms, featureAllowed } from "@/lib/permissions";
-import { Profile, Task, StageRow, cap } from "@/lib/types";
+import { Profile, Task, StageRow, cap, displayName } from "@/lib/types";
 import { downloadCSV } from "@/lib/csv";
 
 /* Reporting — per-person workload across whatever stages the projects use.
@@ -52,7 +52,7 @@ export default function Reporting() {
           <tbody>
             {rows.map(({ p, open, done, per }) => (
               <tr key={p.id} className="border-b border-slate-50 last:border-0">
-                <td className="p-3 font-semibold">{p.full_name}</td>
+                <td className="p-3 font-semibold">{displayName(p)}</td>
                 <td className="p-3">{open}</td>
                 <td className="p-3 font-bold text-emerald-700">{done}</td>
                 {per.map((n, i) => <td key={i} className="p-3">{n}</td>)}
@@ -63,7 +63,7 @@ export default function Reporting() {
       </div>
       <button className="btn-ghost mt-3" onClick={() => downloadCSV("workload-report", [
         ["Person", "Email", "Open", "Completed", ...stageNames.map((s) => cap(s))],
-        ...rows.map(({ p, open, done, per }) => [p.full_name, p.email, open, done, ...per]),
+        ...rows.map(({ p, open, done, per }) => [displayName(p), p.email, open, done, ...per]),
       ])}>Export CSV</button>
     </Shell>
   );

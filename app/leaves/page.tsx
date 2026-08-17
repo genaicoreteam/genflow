@@ -5,7 +5,7 @@ import { PageHead, StatusBadge } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile, hasFullAccess } from "@/lib/session";
 import { useFeaturePerms, featureAllowed } from "@/lib/permissions";
-import { LeaveRequest, Profile, ApprovalRoute, resolveApprover } from "@/lib/types";
+import { LeaveRequest, Profile, ApprovalRoute, resolveApprover, displayName } from "@/lib/types";
 import { downloadCSV, downloadDoc } from "@/lib/csv";
 import { pushNotification } from "@/lib/notify";
 
@@ -65,7 +65,7 @@ export default function Leaves() {
     if (["member", "admin"].includes(profile.role)) { const l = resolveApprover(routeLead, profile, people); if (l) targets.push(l); }
     if (profile.role === "team_lead") { const m = people.find((p) => p.role === "manager"); if (m) targets.push(m); }
     for (const t of targets)
-      await pushNotification(t.id, t.email, `Leave request from ${profile.full_name}`,
+      await pushNotification(t.id, t.email, `Leave request from ${displayName(profile)}`,
         `${f.from_date} → ${half ? f.from_date : f.to_date}${half ? ` (half day, ${f.half_which} half)` : ""}. Reason: ${f.reason}`, "/leaves");
     setF({ from_date: "", to_date: "", reason: "", proof_url: "", leave_type: "full", half_which: "first" });
     setMsg("Request submitted — approvers have been notified."); load();
@@ -84,7 +84,7 @@ export default function Leaves() {
     await supabase().from("leave_requests").update(patch).eq("id", r.id);
     const req = byId[r.requester];
     if (req) await pushNotification(req.id, req.email, `Leave ${status} (${lane.replace("_", " ")} sign-off)`,
-      `Your leave ${r.from_date} → ${r.to_date} was ${status} by ${profile?.full_name}.`, "/leaves");
+      `Your leave ${r.from_date} → ${r.to_date} was ${status} by ${displayName(profile)}.`, "/leaves");
     load();
   }
 
@@ -94,12 +94,12 @@ export default function Leaves() {
     if (kind === "csv") {
       downloadCSV("leaves-report", [
         ["Person", "From", "To", "Type", "Days", "Reason", "Admin", "Team Lead", "Requested"],
-        ...data.map((r) => [byId[r.requester]?.full_name, r.from_date, r.to_date, typeStr(r), days(r), r.reason, r.admin_status, r.team_lead_status, new Date(r.created_at).toLocaleDateString()]),
+        ...data.map((r) => [displayName(byId[r.requester]), r.from_date, r.to_date, typeStr(r), days(r), r.reason, r.admin_status, r.team_lead_status, new Date(r.created_at).toLocaleDateString()]),
       ]);
     } else {
       downloadDoc("leaves-report", "Leaves report",
         `<h2>Leaves report</h2><table border="1" cellpadding="6"><tr><th>Person</th><th>From</th><th>To</th><th>Type</th><th>Days</th><th>Admin</th><th>Team Lead</th></tr>` +
-        data.map((r) => `<tr><td>${byId[r.requester]?.full_name || ""}</td><td>${r.from_date}</td><td>${r.to_date}</td><td>${typeStr(r)}</td><td>${days(r)}</td><td>${r.admin_status}</td><td>${r.team_lead_status}</td></tr>`).join("") + "</table>");
+        data.map((r) => `<tr><td>${displayName(byId[r.requester])}</td><td>${r.from_date}</td><td>${r.to_date}</td><td>${typeStr(r)}</td><td>${days(r)}</td><td>${r.admin_status}</td><td>${r.team_lead_status}</td></tr>`).join("") + "</table>");
     }
   }
 
@@ -146,7 +146,7 @@ export default function Leaves() {
             const lane = myLane(r);
             return (
               <div key={r.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-                <b>{byId[r.requester]?.full_name}</b>
+                <b>{displayName(byId[r.requester])}</b>
                 <span>{r.from_date}{r.to_date !== r.from_date ? ` → ${r.to_date}` : ""}</span>
                 <span className={`badge ${r.leave_type === "half" ? "bg-pastel-yellow text-amber-700" : "bg-slate-100 text-slate-600"}`}>
                   {r.leave_type === "half" ? `½ day · ${r.half_which} half` : `${days(r)} day(s)`}

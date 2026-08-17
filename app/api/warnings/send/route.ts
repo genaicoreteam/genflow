@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { displayName } from "@/lib/types";
 
 /* Sends an alert notification (change #9 — no WhatsApp):
    - records the warning with its monthly level,
@@ -30,13 +31,13 @@ export async function POST(req: Request) {
   const title = level >= 3 ? `Final alert #${level} — marked Inefficient this month` : `Alert #${level} this month`;
   const body = note || "Work is overdue — please update your tasks.";
   const inserts = [{ profile_id, title, body, link: "/warnings" }];
-  if (manager) inserts.push({ profile_id: manager.id, title: `${person.full_name}: ${title}`, body, link: "/warnings" });
+  if (manager) inserts.push({ profile_id: manager.id, title: `${displayName(person)}: ${title}`, body, link: "/warnings" });
 
   if (level >= 3) {
     const { data: seniors } = await db.from("profiles").select("*").in("role", ["team_lead", "manager"]);
     for (const s of seniors || []) {
       if (s.id !== manager?.id && s.id !== profile_id)
-        inserts.push({ profile_id: s.id, title: `Escalation: ${person.full_name} is Inefficient (${level} alerts)`, body, link: "/warnings" });
+        inserts.push({ profile_id: s.id, title: `Escalation: ${displayName(person)} is Inefficient (${level} alerts)`, body, link: "/warnings" });
     }
   }
   await db.from("notifications").insert(inserts);
@@ -53,8 +54,8 @@ export async function POST(req: Request) {
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: process.env.EMAIL_FROM || "GenFlow <onboarding@resend.dev>",
-          to: emails, subject: `GenFlow alert: ${person.full_name} — ${title}`,
-          html: `<p><b>${person.full_name}</b>: ${title}</p><p>${body}</p><p>Open GenFlow → Alert Notifications.</p>`,
+          to: emails, subject: `GenFlow alert: ${displayName(person)} — ${title}`,
+          html: `<p><b>${displayName(person)}</b>: ${title}</p><p>${body}</p><p>Open GenFlow → Alert Notifications.</p>`,
         }),
       }).catch(() => {});
     }

@@ -5,7 +5,7 @@ import { PageHead, StatusBadge, Empty } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile, hasFullAccess } from "@/lib/session";
 import { useFeaturePerms, featureAllowed } from "@/lib/permissions";
-import { Warning, Profile, ApprovalRoute, resolveApprover } from "@/lib/types";
+import { Warning, Profile, ApprovalRoute, resolveApprover, displayName } from "@/lib/types";
 import { downloadCSV } from "@/lib/csv";
 import { pushNotification } from "@/lib/notify";
 
@@ -63,7 +63,7 @@ export default function Alerts() {
     setStatus("Sending…");
     const res = await fetch("/api/warnings/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ profile_id: manual.profile_id, kind: "manual", note: manual.note || "Alert from " + (profile?.full_name || "management") }),
+      body: JSON.stringify({ profile_id: manual.profile_id, kind: "manual", note: manual.note || "Alert from " + displayName(profile) }),
     });
     setStatus(res.ok ? "Alert sent — the person and their manager have been notified." : "Failed to send (check SUPABASE_SERVICE_ROLE_KEY).");
     setManual({ profile_id: "", note: "" }); load();
@@ -76,14 +76,14 @@ export default function Alerts() {
     const target = resolveApprover(routes.find((r) => r.request_type === routeKey), profile, people)
       || people.find((p) => p.role === "team_lead") || null;
     await supabase().from("adhoc_requests").insert({ requester: profile.id, routed_to: target?.id || null, message: adhocMsg.trim() });
-    if (target) await pushNotification(target.id, target.email, `Ad-hoc request from ${profile.full_name}`, adhocMsg.trim(), "/inbox");
+    if (target) await pushNotification(target.id, target.email, `Ad-hoc request from ${displayName(profile)}`, adhocMsg.trim(), "/inbox");
     setAdhocMsg(""); load();
   }
 
   function exportCSV() {
     downloadCSV("alerts-report", [
       ["Person", "Kind", "Level", "Note", "Channel", "When"],
-      ...visible.map((r) => [byId[r.profile_id]?.full_name, r.kind, r.level, r.note, r.sent_via, new Date(r.created_at).toLocaleString()]),
+      ...visible.map((r) => [displayName(byId[r.profile_id]), r.kind, r.level, r.note, r.sent_via, new Date(r.created_at).toLocaleString()]),
     ]);
   }
 
@@ -98,7 +98,7 @@ export default function Alerts() {
               <h2 className="font-display font-bold">Send an alert manually</h2>
               <select className="input" value={manual.profile_id} onChange={(e) => setManual({ ...manual, profile_id: e.target.value })}>
                 <option value="">Choose person…</option>
-                {people.map((p) => <option key={p.id} value={p.id}>{p.full_name} ({monthCount(p.id)} this month)</option>)}
+                {people.map((p) => <option key={p.id} value={p.id}>{displayName(p)} ({monthCount(p.id)} this month)</option>)}
               </select>
               <textarea className="input" rows={2} placeholder="Reason / note" value={manual.note} onChange={(e) => setManual({ ...manual, note: e.target.value })} />
               <button className="btn-primary w-full justify-center">Send alert</button>
@@ -128,7 +128,7 @@ export default function Alerts() {
           <div className="card flex flex-wrap items-center gap-2 p-3">
             <select className="input max-w-[240px]" value={pick} onChange={(e) => setPick(e.target.value)}>
               <option value="">{full || myReports.length ? "Everyone I can see" : "My alerts"}</option>
-              {visiblePeople.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+              {visiblePeople.map((p) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
             </select>
             {(full || myReports.length > 0) && <button className="btn-ghost ml-auto !py-1" onClick={exportCSV}>Export CSV</button>}
           </div>
@@ -136,14 +136,14 @@ export default function Alerts() {
           {/* Inefficiency banner */}
           {visiblePeople.filter((p) => monthCount(p.id) >= 3).map((p) => (
             <div key={p.id} className="card border-2 border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
-              🚩 {p.full_name} has {monthCount(p.id)} alerts this month — marked <b>Inefficient</b>; Team Lead & Manager notified.
+              🚩 {displayName(p)} has {monthCount(p.id)} alerts this month — marked <b>Inefficient</b>; Team Lead & Manager notified.
             </div>
           ))}
 
           {visible.length === 0 && <Empty text="No alerts — everything is moving on time 🎉" />}
           {visible.map((r) => (
             <div key={r.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-              <b>{byId[r.profile_id]?.full_name}</b>
+              <b>{displayName(byId[r.profile_id])}</b>
               <span className="badge bg-slate-100 capitalize text-slate-600">{r.kind.replace("_", " ")}</span>
               <span className={`badge ${r.level >= 3 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>Alert #{r.level} this month</span>
               <span className="text-slate-500">{r.note}</span>

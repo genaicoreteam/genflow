@@ -5,6 +5,7 @@ import { PageHead, Empty } from "@/components/Ui";
 import { supabase, attendanceDb } from "@/lib/supabase";
 import { useProfile } from "@/lib/session";
 import { downloadCSV } from "@/lib/csv";
+import { displayName } from "@/lib/types";
 
 /* Clockify: office in/out times read from the separate attendance database.
    Each person sees only their own rows, matched through the identity mapping
@@ -66,7 +67,7 @@ export default function Clockify() {
   function exportCSV() {
     downloadCSV(`my-office-hours-${from}-to-${to}`, [
       ["Name", "Email", "Date", "In", "Out", "Hours"],
-      ...rows.map((r) => [profile?.full_name || "", profile?.email || "", r.day, r.in_time || "", r.out_time || "", hours(r).toFixed(2)]),
+      ...rows.map((r) => [displayName(profile), profile?.email || "", r.day, r.in_time || "", r.out_time || "", hours(r).toFixed(2)]),
       ["", "", "", "", "Total", total.toFixed(2)],
     ]);
   }
