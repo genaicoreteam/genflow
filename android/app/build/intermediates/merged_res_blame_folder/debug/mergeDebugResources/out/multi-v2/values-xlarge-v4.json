@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.genflow.app-mergeDebugResources-25:/values-xlarge-v4/values-xlarge-v4.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\NxtWave\\.gradle\\caches\\9.3.0\\transforms\\8f95fba8dde4a47f4bf61dd6b3159e33\\workspace\\transformed\\appcompat-1.7.0\\res\\values-xlarge-v4\\values-xlarge-v4.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7",
+                        "startColumns": "4,4,4,4,4,4",
+                        "startOffsets": "55,126,197,267,337,405",
+                        "endColumns": "70,70,69,69,67,67",
+                        "endOffsets": "121,192,262,332,400,468"
+                    }
+                }
+            ]
+        }
+    ]
+}

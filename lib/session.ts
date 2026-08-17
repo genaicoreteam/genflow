@@ -21,10 +21,13 @@ async function ensureProfileForUser(user: { id: string; email?: string | null; u
     .eq("email", email)
     .maybeSingle();
 
+  const fallbackFullName = (user.user_metadata?.full_name as string | undefined)?.trim() ||
+    (email ? email.split("@")[0].replace(/[._-]+/g, " ").replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "");
+
   const fallback = {
     id: user.id,
     email,
-    full_name: (user.user_metadata?.full_name as string) || "",
+    full_name: fallbackFullName,
     phone: (user.user_metadata?.phone as string) || "",
     phone_verified: false,
     role: (roleRow?.role as Role) || "member",

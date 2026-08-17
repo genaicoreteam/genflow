@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // TODO: replace with your live Vercel URL after deploying
-        webView.loadUrl("https://your-genflow.vercel.app")
+        webView.loadUrl("https://genflow-sm.vercel.app")
 
         // Back button navigates web history instead of closing the app
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {

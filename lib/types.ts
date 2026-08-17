@@ -17,6 +17,20 @@ export interface Profile {
   phone_verified: boolean; role: Role; reports_to: string | null; created_at?: string;
 }
 
+export function displayName(value: string | Partial<Profile> | null | undefined): string {
+  const raw = typeof value === "string" ? value : value?.full_name || value?.email || "";
+  const trimmed = String(raw).trim();
+  if (trimmed) return trimmed;
+
+  const email = typeof value === "object" && value?.email ? String(value.email).trim() : "";
+  if (email) {
+    const local = email.split("@")[0]?.trim();
+    if (local) return local.replace(/[._-]+/g, " ").replace(/\s+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  return "Member";
+}
+
 export interface Portfolio { id: string; name: string; color: string; sort: number; }
 export interface Project { id: string; portfolio_id: string; name: string; prefix: string; color: string; sort: number; }
 export interface StageRow { id: string; project_id: string; name: string; color: string; sort: number; }

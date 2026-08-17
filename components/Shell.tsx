@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/lib/session";
 import { supabase } from "@/lib/supabase";
-import { ROLE_LABELS } from "@/lib/types";
+import { ROLE_LABELS, displayName } from "@/lib/types";
 import { useFeaturePerms, featureAllowed } from "@/lib/permissions";
 
 export type AppItem = { href: string; label: string; icon: string; feature?: string; memberHidden?: boolean };
@@ -119,8 +119,8 @@ export default function Shell({ children, title }: { children: React.ReactNode; 
         {profile && (
           <div className="flex items-center gap-2">
             <span className="hidden badge bg-slate-100 text-slate-600 md:inline-flex">{ROLE_LABELS[profile.role]}</span>
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-500 text-sm font-bold text-white" title={profile.full_name}>
-              {(profile.full_name || "?").slice(0, 1).toUpperCase()}
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-brand-500 text-sm font-bold text-white" title={displayName(profile)}>
+              {(displayName(profile) || "?").slice(0, 1).toUpperCase()}
             </span>
           </div>
         )}

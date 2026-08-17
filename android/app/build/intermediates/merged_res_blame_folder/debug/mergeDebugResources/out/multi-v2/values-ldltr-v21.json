@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.genflow.app-mergeDebugResources-25:/values-ldltr-v21/values-ldltr-v21.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\NxtWave\\.gradle\\caches\\9.3.0\\transforms\\8f95fba8dde4a47f4bf61dd6b3159e33\\workspace\\transformed\\appcompat-1.7.0\\res\\values-ldltr-v21\\values-ldltr-v21.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "112",
+                        "endOffsets": "163"
+                    }
+                }
+            ]
+        }
+    ]
+}

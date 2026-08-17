@@ -360,7 +360,7 @@ begin
   values (
     new.id,
     lower(new.email),
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    coalesce(nullif(trim(new.raw_user_meta_data->>'full_name'), ''), split_part(lower(new.email), '@', 1)),
     coalesce(new.raw_user_meta_data->>'phone', ''),
     false,
     coalesce(v_role, 'member'),
@@ -368,9 +368,13 @@ begin
   )
   on conflict (id) do update
     set email = excluded.email,
-        full_name = coalesce(profiles.full_name, excluded.full_name),
+        full_name = coalesce(nullif(trim(profiles.full_name), ''), nullif(trim(excluded.full_name), ''), split_part(lower(excluded.email), '@', 1)),
         phone = coalesce(profiles.phone, excluded.phone),
         role = coalesce(profiles.role, excluded.role);
+
+  update public.profiles
+  set full_name = coalesce(nullif(trim(full_name), ''), split_part(lower(email), '@', 1))
+  where id = new.id and trim(coalesce(full_name, '')) = '';
 
   return new;
 end;
@@ -384,6 +388,10 @@ for each row execute function public.handle_new_user();
 -- ============================================================
 -- SEEDS (idempotent)
 -- ============================================================
+update public.profiles
+set full_name = coalesce(nullif(trim(full_name), ''), split_part(lower(email), '@', 1))
+where trim(coalesce(full_name, '')) = '';
+
 insert into org_rules (cutoff_hours, monthly_limit)
 select 2, 3 where not exists (select 1 from org_rules);
 

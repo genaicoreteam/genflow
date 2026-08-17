@@ -5,7 +5,7 @@ import { PageHead, Empty } from "@/components/Ui";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/lib/session";
 import { useFeaturePerms, featureAllowed, FEATURES, clearPermCache } from "@/lib/permissions";
-import { Profile, Portfolio, Project, Role, ROLE_LABELS, ALL_ROLES, ApprovalRoute } from "@/lib/types";
+import { Profile, Portfolio, Project, Role, ROLE_LABELS, ALL_ROLES, ApprovalRoute, displayName } from "@/lib/types";
 
 const TABS = ["People", "Role allow-list", "Access", "Routing", "Permissions", "Attendance mapping", "Org rules"] as const;
 const REQUEST_TYPES: { key: string; label: string }[] = [
@@ -138,7 +138,7 @@ export default function Admin() {
             <tbody>
               {people.map((p) => (
                 <tr key={p.id} className="border-t border-slate-50">
-                  <td className="p-2 font-semibold">{p.full_name || "—"}</td>
+                  <td className="p-2 font-semibold">{displayName(p)}</td>
                   <td className="p-2 text-slate-500">{p.email}</td>
                   <td className="p-2">
                     <select className="input !py-1" value={p.role} onChange={(e) => setRole(p, e.target.value as Role)}>
@@ -148,7 +148,7 @@ export default function Admin() {
                   <td className="p-2">
                     <select className="input !py-1" value={p.reports_to || ""} onChange={(e) => setReportsTo(p, e.target.value)}>
                       <option value="">—</option>
-                      {people.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{x.full_name}</option>)}
+                      {people.filter((x) => x.id !== p.id).map((x) => <option key={x.id} value={x.id}>{displayName(x)}</option>)}
                     </select>
                   </td>
                   <td className="p-2 text-center font-bold text-brand-600">{reporteeCount(p.id)}</td>
@@ -189,7 +189,7 @@ export default function Admin() {
             <label className="label">Choose a person to grant access for</label>
             <select className="input max-w-md" value={pickPerson} onChange={(e) => setPickPerson(e.target.value)}>
               <option value="">Choose person…</option>
-              {people.map((p) => <option key={p.id} value={p.id}>{p.full_name} — {ROLE_LABELS[p.role]}</option>)}
+              {people.map((p) => <option key={p.id} value={p.id}>{displayName(p)} — {ROLE_LABELS[p.role]}</option>)}
             </select>
             <p className="mt-2 text-xs text-slate-500">Works for Admins and Members alike. A portfolio grant covers every project inside it; project grants are for finer control.</p>
           </div>
@@ -249,7 +249,7 @@ export default function Admin() {
                 {mode === "person" && (
                   <select className="input max-w-[240px]" value={r?.person_target || ""} onChange={(e) => saveRoute(rt.key, { mode: "person", person_target: e.target.value })}>
                     <option value="">Choose person…</option>
-                    {people.map((x) => <option key={x.id} value={x.id}>{x.full_name}</option>)}
+                    {people.map((x) => <option key={x.id} value={x.id}>{displayName(x)}</option>)}
                   </select>
                 )}
               </div>
@@ -314,7 +314,7 @@ function AttRow({ person, current, onSave }: { person: Profile; current: string;
   useEffect(() => setV(current), [current]);
   return (
     <div className="flex flex-wrap items-center gap-2 border-b border-slate-50 py-2 text-sm last:border-0">
-      <span className="min-w-[180px] font-semibold">{person.full_name}</span>
+      <span className="min-w-[180px] font-semibold">{displayName(person)}</span>
       <span className="min-w-[200px] text-slate-500">{person.email}</span>
       <input className="input max-w-xs" placeholder="email or name in attendance DB" value={v} onChange={(e) => setV(e.target.value)} />
       <button className="btn-ghost !py-1" onClick={() => onSave(v)}>Save</button>

@@ -7,7 +7,7 @@ import Recorder from "@/components/Recorder";
 import { supabase } from "@/lib/supabase";
 import { useFeaturePerms, featureAllowed } from "@/lib/permissions";
 import { useProfile } from "@/lib/session";
-import { Profile } from "@/lib/types";
+import { Profile, displayName } from "@/lib/types";
 import { downloadCSV, downloadDoc, downloadText } from "@/lib/csv";
 
 /* RecordUs — visible only to Core Team, Manager, Team Lead, Process Coordinator.
@@ -54,7 +54,7 @@ export default function RecordUs() {
   }
 
   function exportAttendance(kind: "csv" | "doc") {
-    const rows = att.map((a) => [a.day, a.meeting_type, byId[a.profile_id]?.full_name || a.profile_id]);
+    const rows = att.map((a) => [a.day, a.meeting_type, displayName(byId[a.profile_id] || { email: a.profile_id, full_name: "" })]);
     if (kind === "csv") downloadCSV(`attendance-${from}-to-${to}`, [["Date", "Meeting", "Person"], ...rows]);
     else downloadDoc(`attendance-${from}-to-${to}`, "Meeting attendance",
       `<h2>Meeting attendance ${from} → ${to}</h2><table border="1" cellpadding="6"><tr><th>Date</th><th>Meeting</th><th>Person</th></tr>` +
@@ -107,7 +107,7 @@ export default function RecordUs() {
               <label key={p.id} className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-brand-50">
                 <input type="checkbox" className="accent-brand-500" checked={checked.includes(p.id)}
                   onChange={(e) => setChecked((c) => e.target.checked ? [...c, p.id] : c.filter((x) => x !== p.id))} />
-                {p.full_name}
+                {displayName(p)}
               </label>
             ))}
           </div>
