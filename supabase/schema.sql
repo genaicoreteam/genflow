@@ -10,13 +10,13 @@ create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text unique not null,
   full_name text not null default '',
-  phone text default '',
-  phone_verified boolean default false,
   role text not null default 'member'
     check (role in ('core_team','manager','team_lead','process_coordinator','admin','member')),
   reports_to uuid references profiles(id) on delete set null,
   created_at timestamptz default now()
 );
+alter table profiles drop column if exists phone;
+alter table profiles drop column if exists phone_verified;
 
 create table if not exists role_assignments (
   email text primary key,
@@ -392,20 +392,17 @@ begin
   where email = lower(new.email)
   limit 1;
 
-  insert into public.profiles (id, email, full_name, phone, phone_verified, role, reports_to)
+  insert into public.profiles (id, email, full_name, role, reports_to)
   values (
     new.id,
     lower(new.email),
     coalesce(nullif(trim(new.raw_user_meta_data->>'full_name'), ''), split_part(lower(new.email), '@', 1)),
-    coalesce(new.raw_user_meta_data->>'phone', ''),
-    false,
     coalesce(v_role, 'member'),
     null
   )
   on conflict (id) do update
     set email = excluded.email,
         full_name = coalesce(nullif(trim(profiles.full_name), ''), nullif(trim(excluded.full_name), ''), split_part(lower(excluded.email), '@', 1)),
-        phone = coalesce(profiles.phone, excluded.phone),
         role = coalesce(profiles.role, excluded.role);
 
   update public.profiles
