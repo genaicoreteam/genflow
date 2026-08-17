@@ -12,7 +12,7 @@ own deadline — plus the full operations layer around the work:
 | Time | Early Leave / Late Coming (cut-off + monthly-limit rules, escalation to Team Lead), Leaves Approval (dual sign-off: Admin + Team Lead), Clockify (reads office in/out from a second Supabase project) |
 | Meetings | RecordUs (live audio + live transcript, standup/learning-hour attendance), Mid-day Records (team folders) |
 | Accountability | Cumulative Report (daily/weekly/monthly output), Alert Notifications in-app + email to the person and their manager (3 in a month ⇒ Inefficient, escalated to Team Lead + Manager), ad-hoc/emergency escalations, Feedback Box |
-| Access | 6 role dashboards (Core Team, Manager, Team Lead, Process Coordinator, Admin, Member) via an email allow-list at signup; MSG91 OTP phone verification; email notifications for every request/approval |
+| Access | 6 role dashboards (Core Team, Manager, Team Lead, Process Coordinator, Admin, Member) via an email allow-list at signup; email + password signup; email notifications for every request/approval |
 | Mobile | Android WebView app + "Download App" button |
 
 ## 1 · Set up Supabase (5 minutes)
@@ -34,9 +34,6 @@ Fill in:
 - `NEXT_PUBLIC_ATTENDANCE_SUPABASE_URL` + key → the **other** Supabase project whose
   `office_punches (email, day, in_time, out_time)` table feeds Clockify.
   Leave blank to fall back to the main database's own `office_punches` table.
-- `MSG91_AUTHKEY`, `MSG91_OTP_TEMPLATE_ID` → signup OTP. **Until these are set, the
-  app runs OTP in demo mode: the code is `123456`.**
-  (MSG91 is used for the signup OTP only — WhatsApp warnings have been removed.)
 - `RESEND_API_KEY` → transactional email for every request/approval notification
   (free at resend.com). Until set, emails are skipped silently.
 - `CRON_SECRET` → any random string; Vercel sends it with the two daily cron calls.
@@ -48,7 +45,7 @@ npm run dev        # http://localhost:3000
 ```
 
 ## 4 · First users & roles
-Sign up normally (OTP demo code `123456` until MSG91 is configured). Everyone starts
+Sign up with full name, work email and a password. Everyone starts
 as **Member**. To hand out the five senior dashboards, either
 - pre-add emails in **Admin → Role allow-list** (signups then land in the right role), or
 - open Supabase → `role_assignments` and insert rows, or change `profiles.role` directly

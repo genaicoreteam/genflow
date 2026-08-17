@@ -28,8 +28,6 @@ async function ensureProfileForUser(user: { id: string; email?: string | null; u
     id: user.id,
     email,
     full_name: fallbackFullName,
-    phone: (user.user_metadata?.phone as string) || "",
-    phone_verified: false,
     role: (roleRow?.role as Role) || "member",
     reports_to: null,
   };

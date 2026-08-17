@@ -13,8 +13,8 @@ export const ALL_ROLES = Object.keys(ROLE_LABELS) as Role[];
 export const FULL_ACCESS: Role[] = ["core_team", "manager", "team_lead", "process_coordinator"];
 
 export interface Profile {
-  id: string; email: string; full_name: string; phone: string;
-  phone_verified: boolean; role: Role; reports_to: string | null; created_at?: string;
+  id: string; email: string; full_name: string;
+  role: Role; reports_to: string | null; created_at?: string;
 }
 
 export function displayName(value: string | Partial<Profile> | null | undefined): string {
