@@ -12,6 +12,7 @@ export default function MyWork() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [stages, setStages] = useState<StageRow[]>([]);
+  const [view, setView] = useState<"list" | "kanban">("list");
 
   useEffect(() => {
     if (!profile) return;
@@ -31,22 +32,56 @@ export default function MyWork() {
     stages.find((s) => s.project_id === projectId && s.name === name)?.color
     || stages.find((s) => s.name === name)?.color || "#2F63F6";
 
+  const stageNames = useMemo(() => Array.from(new Set(stages.map((s) => s.name))), [stages]);
+
   return (
     <Shell title="My Work">
       <PageHead title="My Work" sub="Everything assigned to you, across every project and stage — soonest deadline first." />
-      {tasks.length === 0 ? <Empty text="Nothing assigned to you right now." /> : (
-        <div className="space-y-2">
-          {tasks.map((t) => (
-            <Link key={t.id} href={`/project/${t.project_id}`} className="card flex flex-wrap items-center gap-2 p-3 text-sm hover:border-brand-200">
-              <span className="text-[11px] font-semibold text-brand-500">{t.code}</span>
-              <span className={t.status === "completed" ? "text-slate-400 line-through" : "font-semibold"}>{t.title}</span>
-              <span className="badge text-white" style={{ background: stageColor(t.stage, t.project_id) }}>{cap(t.stage)}</span>
-              <span className="badge bg-brand-100 text-brand-700">{pj[t.project_id]?.name}</span>
-              <span className="ml-auto flex items-center gap-2">
-                {t.due_at && <span className={`text-xs ${t.status === "open" && new Date(t.due_at) < new Date() ? "font-bold text-red-600" : "text-slate-500"}`}>{new Date(t.due_at).toLocaleString()}</span>}
-                <StatusBadge s={t.status} />
-              </span>
-            </Link>
+      <div className="card mb-3 p-3 flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <button className={`btn-ghost ${view === "list" ? "bg-slate-100" : ""}`} onClick={() => setView("list")}>List view</button>
+          <button className={`btn-ghost ${view === "kanban" ? "bg-slate-100" : ""}`} onClick={() => setView("kanban")}>Kanban view</button>
+        </div>
+        <div className="ml-auto text-sm text-slate-500">{tasks.length} tasks assigned to you</div>
+      </div>
+
+      {view === "list" && (
+        tasks.length === 0 ? <Empty text="Nothing assigned to you right now." /> : (
+          <div className="space-y-2">
+            {tasks.map((t) => (
+              <Link key={t.id} href={`/project/${t.project_id}`} className="card flex flex-wrap items-center gap-2 p-3 text-sm hover:border-brand-200">
+                <span className="text-[11px] font-semibold text-brand-500">{t.code}</span>
+                <span className={t.status === "completed" ? "text-slate-400 line-through" : "font-semibold"}>{t.title}</span>
+                <span className="badge text-white" style={{ background: stageColor(t.stage, t.project_id) }}>{cap(t.stage)}</span>
+                <span className="badge bg-brand-100 text-brand-700">{pj[t.project_id]?.name}</span>
+                <span className="ml-auto flex items-center gap-2">
+                  {t.due_at && <span className={`text-xs ${t.status === "open" && new Date(t.due_at) < new Date() ? "font-bold text-red-600" : "text-slate-500"}`}>{new Date(t.due_at).toLocaleString()}</span>}
+                  <StatusBadge s={t.status} />
+                </span>
+              </Link>
+            ))}
+          </div>
+        )
+      )}
+
+      {view === "kanban" && (
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          {stageNames.map((s) => (
+            <div key={s} className="card p-3">
+              <h3 className="mb-2 font-semibold">{cap(s)}</h3>
+              <div className="space-y-2">
+                {tasks.filter((t) => t.stage === s).map((t) => (
+                  <Link key={t.id} href={`/project/${t.project_id}`} className="rounded-xl border border-slate-50 p-2 text-sm block">
+                    <div className="flex items-center gap-2">
+                      <div className="text-[11px] font-semibold text-brand-500">{t.code}</div>
+                      <div className={`ml-2 ${t.status === "completed" ? "text-slate-400 line-through" : "font-semibold"}`}>{t.title}</div>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500">{pj[t.project_id]?.name} • {t.due_at ? new Date(t.due_at).toLocaleString() : "No due"}</div>
+                  </Link>
+                ))}
+                {tasks.filter((t) => t.stage === s).length === 0 && <div className="text-sm text-slate-400">No tasks</div>}
+              </div>
+            </div>
           ))}
         </div>
       )}
