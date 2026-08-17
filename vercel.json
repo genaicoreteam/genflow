@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/cron/task-update-check", "schedule": "30 13 * * *" },
+    { "path": "/api/cron/admin-assignment-check", "schedule": "15 13 * * *" }
+  ]
+}
