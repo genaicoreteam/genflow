@@ -80,6 +80,27 @@ create table if not exists tasks (
   created_at timestamptz default now()
 );
 alter table tasks drop constraint if exists tasks_stage_check;
+alter table tasks add column if not exists description text default '';
+alter table tasks add column if not exists priority text check (priority in ('low','medium','high','urgent'));
+alter table tasks add column if not exists labels text[] not null default '{}'::text[];
+
+create table if not exists task_checklist_items (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references tasks(id) on delete cascade,
+  text text not null,
+  done boolean not null default false,
+  sort int not null default 0,
+  created_at timestamptz default now()
+);
+
+create table if not exists task_files (
+  id uuid primary key default gen_random_uuid(),
+  task_id uuid not null references tasks(id) on delete cascade,
+  name text not null,
+  path text not null,
+  uploaded_by uuid references profiles(id) on delete set null,
+  created_at timestamptz default now()
+);
 
 -- Stage hand-off automation (existing feature)
 create table if not exists automation_rules (
@@ -349,7 +370,7 @@ begin
     'tasks','automation_rules','logic_rules','discussions','goals','project_docs','project_files',
     'notifications','org_rules','time_permissions','leave_requests','warnings','adhoc_requests','feedback',
     'recordus_meetings','midday_meetings','meeting_attendance','attendance_map','office_punches',
-    'approval_routes','feature_permissions']
+    'approval_routes','feature_permissions','saved_filters','task_checklist_items','task_files']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists "authenticated all" on %I', t);

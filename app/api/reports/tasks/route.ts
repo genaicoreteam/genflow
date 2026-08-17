@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { verifyUser } from "@/lib/serverAuth";
 
 // Server-side reporting endpoint: accepts filters and returns paginated tasks
 export async function POST(req: Request) {
+  const user = await verifyUser(req);
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const body = await req.json().catch(() => ({}));
   const {
-    profile_id,
     portfolio_ids = [],
     project_ids = [],
     sections = [],
@@ -23,44 +26,46 @@ export async function POST(req: Request) {
   // Determine visibility based on hierarchy: match behaviour elsewhere in the app
   const { data: allPeople } = await db.from("profiles").select("*").order("full_name");
   const peopleList = (allPeople || []) as any[];
-  const myReports = peopleList.filter((p) => p.reports_to === profile_id).map((p) => p.id);
+  const myReports = peopleList.filter((p) => p.reports_to === user.id).map((p) => p.id);
   const fullRoles = ["core_team", "manager", "team_lead", "process_coordinator", "admin"];
-  const meRow = peopleList.find((p) => p.id === profile_id);
+  const meRow = peopleList.find((p) => p.id === user.id);
   const hasFull = meRow && fullRoles.includes(meRow.role);
   let allowedIds: string[] | null = null;
   if (!hasFull) {
-    allowedIds = myReports.length ? [...myReports, profile_id] : [profile_id];
+    allowedIds = myReports.length ? [...myReports, user.id] : [user.id];
   }
 
-  // Build query
-  let qBuilder = db.from("tasks").select(`*, projects(name, portfolio_id)`);
-
-  if (allowedIds) qBuilder = qBuilder.in("assignee", allowedIds);
-  if (project_ids && project_ids.length) qBuilder = qBuilder.in("project_id", project_ids);
-  if (sections && sections.length) qBuilder = qBuilder.in("stage", sections);
-  if (people && people.length) qBuilder = qBuilder.in("assignee", people);
-
-  // If portfolio filter provided, translate to projects
+  // If portfolio filter provided, translate to projects up front so both queries below share it
+  let portfolioProjectIds: string[] | null = null;
   if (portfolio_ids && portfolio_ids.length) {
     const { data: pj } = await db.from("projects").select("id").in("portfolio_id", portfolio_ids);
-    const pids = (pj || []).map((x: any) => x.id);
-    if (pids.length) qBuilder = qBuilder.in("project_id", pids);
-    else return NextResponse.json({ rows: [], total: 0 });
+    portfolioProjectIds = (pj || []).map((x: any) => x.id);
+    if (portfolioProjectIds.length === 0) return NextResponse.json({ rows: [], total: 0 });
   }
 
-  if (q && q.trim()) {
-    const ql = q.trim();
-    // Simple text search on title or code
-    qBuilder = qBuilder.ilike("title", `%${ql}%`).or(`code.ilike.%${ql}%`);
+  // Same filters applied to two independent builders — the count option must be set
+  // on the initial select() call, so it can't share a builder with the data query.
+  function applyFilters<T extends { in: any; ilike: any; or: any }>(qb: T): T {
+    if (allowedIds) qb = qb.in("assignee", allowedIds);
+    if (project_ids && project_ids.length) qb = qb.in("project_id", project_ids);
+    if (sections && sections.length) qb = qb.in("stage", sections);
+    if (people && people.length) qb = qb.in("assignee", people);
+    if (portfolioProjectIds) qb = qb.in("project_id", portfolioProjectIds);
+    if (q && q.trim()) {
+      const ql = q.trim();
+      qb = qb.ilike("title", `%${ql}%`).or(`code.ilike.%${ql}%`);
+    }
+    return qb;
   }
 
-  // Count total
-  const countRes = await qBuilder.range(0, 0).select("id", { count: "exact", head: true });
+  // Count total (head: true means no rows come back, just the count)
+  const countRes = await applyFilters(db.from("tasks").select("id", { count: "exact", head: true }));
   const total = (countRes.count as number) || 0;
 
   const from = Number(offset) || 0;
   const to = Math.min(from + (Number(limit) || 100) - 1, from + 1000);
-  const { data: rows } = await qBuilder.order("created_at", { ascending: false }).range(from, to);
+  const dataQuery = applyFilters(db.from("tasks").select(`*, projects(name, portfolio_id)`));
+  const { data: rows } = await dataQuery.order("created_at", { ascending: false }).range(from, to);
 
   return NextResponse.json({ rows: rows || [], total });
 }

@@ -66,3 +66,9 @@ export function useProfile() {
 export function hasFullAccess(role?: Role | null) {
   return !!role && FULL_ACCESS.includes(role);
 }
+
+/** Current session's access token, for attaching Authorization headers to API routes. */
+export async function getAccessToken(): Promise<string | null> {
+  const { data } = await supabase().auth.getSession();
+  return data.session?.access_token || null;
+}
