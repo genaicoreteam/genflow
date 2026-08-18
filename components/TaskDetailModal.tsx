@@ -6,6 +6,7 @@ import { copyText } from "@/lib/clipboard";
 import TaskComments from "./TaskComments";
 import TaskChecklist from "./TaskChecklist";
 import TaskFiles from "./TaskFiles";
+import DueDateTimeInput from "./DueDateTimeInput";
 
 /* Advanced task view opened by clicking a task anywhere in the app.
    Automation-aware callers (the project board) pass their own handlers so
@@ -150,8 +151,7 @@ export default function TaskDetailModal({
           </div>
           <div>
             <label className="label">Due</label>
-            <input type="datetime-local" className="input" disabled={!editable}
-              value={task.due_at ? new Date(task.due_at).toISOString().slice(0, 16) : ""} onChange={(e) => due(e.target.value)} />
+            <DueDateTimeInput value={task.due_at} onChange={due} disabled={!editable} />
           </div>
         </div>
 
