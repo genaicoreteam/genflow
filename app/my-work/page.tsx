@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/lib/session";
 import { Task, Project, Profile, StageRow, cap } from "@/lib/types";
 import { copyText } from "@/lib/clipboard";
+import { formatDueAt } from "@/lib/date";
 import TaskDetailModal from "@/components/TaskDetailModal";
 import Link from "next/link";
 
@@ -61,7 +62,7 @@ export default function MyWork() {
                 <span className="badge text-white" style={{ background: stageColor(t.stage, t.project_id) }}>{cap(t.stage)}</span>
                 <span className="badge bg-brand-100 text-brand-700">{pj[t.project_id]?.name}</span>
                 <span className="ml-auto flex items-center gap-2">
-                  {t.due_at && <span className={`text-xs ${t.status === "open" && new Date(t.due_at) < new Date() ? "font-bold text-red-600" : "text-slate-500"}`}>{new Date(t.due_at).toLocaleString()}</span>}
+                  {t.due_at && <span className={`text-xs ${t.status === "open" && new Date(t.due_at) < new Date() ? "font-bold text-red-600" : "text-slate-500"}`}>{formatDueAt(t.due_at)}</span>}
                   <StatusBadge s={t.status} />
                   <Link href={`/project/${t.project_id}`} onClick={(e) => e.stopPropagation()} title="Open project" className="text-slate-400 hover:text-slate-600">↗</Link>
                 </span>
@@ -85,7 +86,7 @@ export default function MyWork() {
                       <div className={`ml-2 ${t.status === "completed" ? "text-slate-400 line-through" : "font-semibold"}`}>{t.title}</div>
                     </div>
                     <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                      <span>{pj[t.project_id]?.name} • {t.due_at ? new Date(t.due_at).toLocaleString() : "No due"}</span>
+                      <span>{pj[t.project_id]?.name} • {t.due_at ? formatDueAt(t.due_at) : "No due"}</span>
                       <Link href={`/project/${t.project_id}`} onClick={(e) => e.stopPropagation()} title="Open project" className="text-slate-400 hover:text-slate-600">↗</Link>
                     </div>
                   </div>

@@ -9,8 +9,10 @@ import { Task, Project, Profile, AutomationRule, StageRow, LogicRule, cap, displ
 import { pushNotification } from "@/lib/notify";
 import { runLogicRules } from "@/lib/automation";
 import { copyText } from "@/lib/clipboard";
+import { formatDueAt } from "@/lib/date";
 import TaskComments from "@/components/TaskComments";
 import TaskDetailModal from "@/components/TaskDetailModal";
+import DueDateTimeInput from "@/components/DueDateTimeInput";
 
 const TABS = ["Tasks", "Roadmap", "Discussions", "Docs", "Files", "Calendar"] as const;
 
@@ -81,7 +83,7 @@ export default function ProjectPage() {
     const p = byId[pid];
     if (!p) return;
     await pushNotification(p.id, p.email, "New task assigned to you",
-      `"${taskTitle}" (${code}) in ${project?.name} — ${cap(stage)}${due ? `, due ${new Date(due).toLocaleString()}` : ""}.`,
+      `"${taskTitle}" (${code}) in ${project?.name} — ${cap(stage)}${due ? `, due ${formatDueAt(due)}` : ""}.`,
       `/project/${id}`);
   }
 
@@ -319,10 +321,9 @@ function TaskCard({ t, people, canEdit, me, onDragStart, onComplete, onReopen, o
           onChange={() => (t.status === "open" ? onComplete() : onReopen())} className="mt-0.5 accent-brand-500" />
         <span className={`text-sm font-semibold ${t.status === "completed" ? "text-slate-400 line-through" : ""}`}>{t.title}</span>
       </label>
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <input type="datetime-local" className="input !w-auto !px-2 !py-1 text-xs" disabled={!canEdit}
-          value={t.due_at ? new Date(t.due_at).toISOString().slice(0, 16) : ""} onChange={(e) => onDue(e.target.value)} />
-        <select className="input !w-28 !px-1 !py-1 text-xs" disabled={!canEdit} value={t.assignee || ""} onChange={(e) => onAssign(e.target.value)}>
+      <div className="mt-2 space-y-1">
+        <DueDateTimeInput value={t.due_at} onChange={onDue} disabled={!canEdit} compact />
+        <select className="input !w-full !px-1 !py-1 text-xs" disabled={!canEdit} value={t.assignee || ""} onChange={(e) => onAssign(e.target.value)}>
           <option value="">Unassigned</option>
           {people.map((p: Profile) => <option key={p.id} value={p.id}>{displayName(p)}</option>)}
         </select>
@@ -333,7 +334,7 @@ function TaskCard({ t, people, canEdit, me, onDragStart, onComplete, onReopen, o
         <option value="short">Short</option><option value="poster">Poster</option><option value="other">Other</option>
       </select>
       {t.due_at && t.status === "open" && new Date(t.due_at) < new Date() && (
-        <div className="mt-1 text-[11px] font-bold text-red-600">Overdue · {new Date(t.due_at).toLocaleString()}</div>
+        <div className="mt-1 text-[11px] font-bold text-red-600">Overdue · {formatDueAt(t.due_at)}</div>
       )}
 
       {showComments && <TaskComments taskCode={t.code} people={people} projectId={t.project_id} />}
@@ -367,7 +368,7 @@ function Roadmap({ tasks, byId, stages }: { tasks: Task[]; byId: Record<string, 
             {t.content_type && <span className="badge bg-slate-100 text-slate-600">{t.content_type}</span>}
             <span className="ml-auto flex items-center gap-2 text-xs text-slate-500">
               {t.assignee && <span>{displayName(byId[t.assignee])}</span>}
-              {t.due_at && <span className={t.status === "open" && new Date(t.due_at) < new Date() ? "font-bold text-red-600" : ""}>{new Date(t.due_at).toLocaleString()}</span>}
+              {t.due_at && <span className={t.status === "open" && new Date(t.due_at) < new Date() ? "font-bold text-red-600" : ""}>{formatDueAt(t.due_at)}</span>}
             </span>
           </div>
         ))}
