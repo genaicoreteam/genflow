@@ -93,6 +93,12 @@ export default function Automations() {
 
       {/* Layer 1: stage hand-offs */}
       <h2 className="mb-2 text-lg font-extrabold">1 · Stage hand-offs</h2>
+      <p className="mb-2 text-sm text-slate-500">
+        Add more than one rule with the same "When completed in" stage to fan a task out to several stages at
+        once on completion — e.g. Scripting → Thumbnail <em>and</em> Scripting → Editing, each with its own
+        assignee. This only applies when a task is marked complete directly; dragging a card to a specific
+        column always moves it to just that one column.
+      </p>
       <form onSubmit={addHandOff} className="card mb-4 grid gap-3 p-4 sm:grid-cols-6">
         <div><label className="label">Project</label>
           <select className="input" value={f.project_id} onChange={(e) => setF({ ...f, project_id: e.target.value })}>
