@@ -99,34 +99,58 @@ export default function ProjectPage() {
   }
 
   /** Change #2d: the live card MOVES forward per automation; a completed
-      duplicate stays behind in the original stage for reports. */
+      duplicate stays behind in the original stage for reports.
+      When more than one hand-off rule is configured for the same "from"
+      stage (and this isn't a manual drag to one specific column), the
+      task fans out — a fresh duplicate is created in every target stage,
+      each with its own assignee/due offset per rule. */
   async function completeTask(t: Task, dropStage?: string) {
     if (busy) return; setBusy(true);
     const db = supabase();
     const now = new Date();
-    const rule = rules.find((r) => r.from_stage === t.stage && (!dropStage || r.to_stage === dropStage));
-    const target = dropStage || rule?.to_stage || null;
+    const matchingRules = rules.filter((r) => r.active !== false && r.from_stage === t.stage && (!dropStage || r.to_stage === dropStage));
 
-    // completed duplicate stays behind, keeping the original code + doer
-    await db.from("tasks").insert({
-      project_id: t.project_id, code: t.code, title: t.title, stage: t.stage,
-      status: "completed", completed_at: now.toISOString(), assignee: t.assignee,
-      origin_task: t.id, content_type: t.content_type, created_by: profile?.id || null,
-    });
-
-    if (target) {
-      const nextAssignee = rule?.new_assignee || t.assignee;
-      const due = new Date(now.getTime() + (rule?.due_offset_hours || 24) * 3600000).toISOString();
-      await db.from("tasks").update({
-        stage: target, status: "open", assignee: nextAssignee, due_at: due,
-        code: newCode(2), completed_at: null,
-      }).eq("id", t.id);
-      if (nextAssignee && nextAssignee !== t.assignee) await notifyAssignee(nextAssignee, t.title, newCode(2), target, due);
-      else if (nextAssignee) await notifyAssignee(nextAssignee, t.title, newCode(2), target, due);
-      await runLogicRules({ rules: logic, trigger: "moved_to_stage", task: { ...t, stage: target }, stageMoved: target, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 2, actorName: displayName(profile) });
-    } else {
-      // last stage (or no rule): simply complete in place
+    if (!dropStage && matchingRules.length > 1) {
+      // Fan-out: this row IS the historical record, marked completed in place;
+      // every configured target stage gets its own fresh duplicate task.
       await db.from("tasks").update({ status: "completed", completed_at: now.toISOString() }).eq("id", t.id);
+      let offset = 2;
+      for (const rule of matchingRules) {
+        const nextAssignee = rule.new_assignee || t.assignee;
+        const due = new Date(now.getTime() + (rule.due_offset_hours || 24) * 3600000).toISOString();
+        const code = newCode(offset++);
+        await db.from("tasks").insert({
+          project_id: t.project_id, code, title: t.title, stage: rule.to_stage,
+          status: "open", assignee: nextAssignee, due_at: due, content_type: t.content_type,
+          origin_task: t.id, created_by: profile?.id || null,
+        });
+        if (nextAssignee) await notifyAssignee(nextAssignee, t.title, code, rule.to_stage, due);
+        await runLogicRules({ rules: logic, trigger: "moved_to_stage", task: { ...t, stage: rule.to_stage }, stageMoved: rule.to_stage, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + offset, actorName: displayName(profile) });
+      }
+    } else {
+      const rule = matchingRules[0];
+      const target = dropStage || rule?.to_stage || null;
+
+      // completed duplicate stays behind, keeping the original code + doer
+      await db.from("tasks").insert({
+        project_id: t.project_id, code: t.code, title: t.title, stage: t.stage,
+        status: "completed", completed_at: now.toISOString(), assignee: t.assignee,
+        origin_task: t.id, content_type: t.content_type, created_by: profile?.id || null,
+      });
+
+      if (target) {
+        const nextAssignee = rule?.new_assignee || t.assignee;
+        const due = new Date(now.getTime() + (rule?.due_offset_hours || 24) * 3600000).toISOString();
+        await db.from("tasks").update({
+          stage: target, status: "open", assignee: nextAssignee, due_at: due,
+          code: newCode(2), completed_at: null,
+        }).eq("id", t.id);
+        if (nextAssignee) await notifyAssignee(nextAssignee, t.title, newCode(2), target, due);
+        await runLogicRules({ rules: logic, trigger: "moved_to_stage", task: { ...t, stage: target }, stageMoved: target, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 2, actorName: displayName(profile) });
+      } else {
+        // last stage (or no rule): simply complete in place
+        await db.from("tasks").update({ status: "completed", completed_at: now.toISOString() }).eq("id", t.id);
+      }
     }
     await runLogicRules({ rules: logic, trigger: "task_completed", task: t, people, projectPrefix: project?.prefix || "PRJ", taskCount: tasks.length + 2, actorName: displayName(profile) });
     setBusy(false); load();
